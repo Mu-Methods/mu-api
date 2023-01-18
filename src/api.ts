@@ -47,8 +47,13 @@ interface DB {
   create: ( opts:Object ) => Promise<boolean>;
 }
 
+interface Invite {
+  id: FeedID;
+  pubs?: Array<string>;
+}
+
 interface PeerInvites {
-  create: (id:FeedID, toAddress: 'string', cb: Function) => Promise<boolean>;
+  create: (newInvite: Invite, cb: Function) => Promise<boolean>;
   openInvite: (invite: Message, cb: Function) => Promise<boolean>;
   acceptInvite: (invite: Message, cb: Function) => Promise<boolean>;
 }
@@ -68,7 +73,7 @@ interface MuCaps {
 }
 
 export interface API {
-  connect: (address: unknown) => Promise<boolean>;
+  connect: (address: unknown, cb: Function) => Promise<boolean>;
   close: () => Promise<boolean>;
   db: DB;
   peerInvites: PeerInvites;

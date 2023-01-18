@@ -26,9 +26,9 @@ export const init = (api: API) => {
     openInvite: openInvite.bind(null, api),
     acceptInvite: acceptInvite.bind(null, api),
     close: close.bind(null, api),
-    getAccounts: getAccounts.bind(null, api),
+    //getAccounts: getAccounts.bind(null, api),
     getFeed: getFeed.bind(null, api),
-    createNewAccount: createNewAccount.bind(null, api),
+    //createNewAccount: createNewAccount.bind(null, api),
     tie: tie.bind(null, api),
     acceptTie: acceptTie.bind(null, api),
     cut: cut.bind(null, api),
@@ -62,16 +62,19 @@ async function connect (api: API, address: unknown): Promise<boolean> {
   return await api.connect(address, errHandler)
 }
 
-async function generateInvite (api: API, id?: FeedID, toAddress?:string, asLink?:boolean): Promise<Invite | string> {
-  return await api.peerInvites.create(id, toAddress, errHandler)
+async function generateInvite (api: API, id: FeedID, recps?:Array<string>, /*asLink?:boolean*/): Promise<boolean> {
+  if (recps) {
+    return await api.peerInvites.create({ id: id, pubs: recps}, errHandler)
+  }
+  return await api.peerInvites.create({ id: id }, errHandler)
 }
 
-async function openInvite (invite:Message):Promise<boolean> {
+async function openInvite (api: API, invite:Message):Promise<boolean> {
   return await api.peerInvites.openInvite(invite, errHandler) 
 }
 
 
-async function acceptInvite (invite:Message):Promise<boolean> {
+async function acceptInvite (api: API, invite:Message):Promise<boolean> {
   return await api.peerInvites.acceptInvite(invite, errHandler)
 }
 
