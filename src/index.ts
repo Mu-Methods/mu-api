@@ -1,6 +1,8 @@
+const { where, and, type, author, toPromise } = require('ssb-db2/operators')
+
 export const name = 'muAPI'
 export const version = require('../package.json')
-import { API, Message, TieMessage, FeedID, Invite } from './api'
+import { API, Message, TieMessage, FeedID, Invite } from './types'
 
 export const manifest = {
   connect: 'async',
@@ -38,6 +40,19 @@ export const init = (api: API) => {
   }
 }
 
+
+// #initAccount
+// check to see if their is a mnemonic
+// if not create mnemonic
+// create first key or next key
+// publish hello world message
+// connect to room (#acceptInvite)
+//
+
+// #
+
+// #addPeer
+
 /*
 async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<Account> {
   await api.keys.generate().then(account => {
@@ -45,13 +60,28 @@ async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<A
   })
 }
 */
-/*
+
 async function getAccounts (api: API): Promise<string[]> {
-  await api.db.feed.filter(msg => {
-    msg.content.type === 'account'
+  const accounts = []
+  api.keys.getKeys().forEach((keyObj) => {
+    const initMessages = await api.db.query(where(and(author(keyObj.id), type('account#init'))), toPromise())
+    const initMessage = initMessages[0] || {}
+    const account = {
+      ...initMessage[0]
+      id: keyObj.id,
+      public: keyObj.public,
+      ties: api.getTies
+    }
+    const feed = await api.db.query(where(author(keyObj.id)), toPromise())
+
+    const nameMessages = await api.db.query(where(and(author(keyObj.id), type('account#name'))), toPromise())
+    const contactMessages = await api.db.query(where(contact(keyObj.id)), toPromise()).sort((m1, m2) => {
+     () m1.value.content.sequence > m2.value.content.sequence
+    })
+
   })
 }
-*/
+
 
 async function connect (api: API, address: unknown): Promise<boolean> {
   return new Promise((resolve, reject) => {
