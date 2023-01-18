@@ -1,6 +1,6 @@
 export const name = 'muAPI'
 export const version = require('../package.json')
-import { API, Message, TieMessage, FeedID } from './api'
+import { API, Message, TieMessage, FeedID, Invite } from './api'
 
 export const manifest = {
   connect: 'async',
@@ -38,11 +38,6 @@ export const init = (api: API) => {
   }
 }
 
-function errHandler (err:any) {
-  if (err) throw err
-  return true
-}
-
 /*
 async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<Account> {
   await api.keys.generate().then(account => {
@@ -59,27 +54,47 @@ async function getAccounts (api: API): Promise<string[]> {
 */
 
 async function connect (api: API, address: unknown): Promise<boolean> {
-  return await api.connect(address, errHandler)
+  return new Promise((resolve, reject) => {
+    api.connect(address, (err:any, res:any) => {
+      if (err) reject(err)
+      resolve(res)
+    })
+  })
 }
 
 async function generateInvite (api: API, id: FeedID, recps?:Array<string>, /*asLink?:boolean*/): Promise<boolean> {
-  if (recps) {
-    return await api.peerInvites.create({ id: id, pubs: recps}, errHandler)
-  }
-  return await api.peerInvites.create({ id: id }, errHandler)
+  return new Promise((resolve, reject) => {
+    var newInvite:Invite
+    newInvite = { id: id }
+    if (recps) newInvite.pubs = recps
+    api.peerInvites.create(newInvite, (err:any, res:any) => {
+      if (err) reject(err)
+      resolve(res)
+    })
+  })
 }
 
 async function openInvite (api: API, invite:Message):Promise<boolean> {
-  return await api.peerInvites.openInvite(invite, errHandler) 
+  return new Promise((resolve, reject) => {
+    api.peerInvites.openInvite(invite, (err:any, res:any) => {
+      if (err) reject(err)
+      resolve(res)
+    })
+  })
 }
 
 
 async function acceptInvite (api: API, invite:Message):Promise<boolean> {
-  return await api.peerInvites.acceptInvite(invite, errHandler)
+  return new Promise ((resolve, reject) => {
+    api.peerInvites.acceptInvite(invite, (err:any, res:any) => {
+      if (err) reject(err)
+      resolve(res)
+    })
+  })
 }
 
 async function close (api: API): Promise<boolean> {
-  return await api.close().then(errHandler)
+  return await api.close()
 }
 
 async function getFeed (api: API): Promise<Message[]> {

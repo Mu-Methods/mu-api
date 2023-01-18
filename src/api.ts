@@ -47,7 +47,7 @@ interface DB {
   create: ( opts:Object ) => Promise<boolean>;
 }
 
-interface Invite {
+export interface Invite {
   id: FeedID;
   pubs?: Array<string>;
 }
