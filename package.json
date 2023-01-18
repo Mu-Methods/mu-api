@@ -1,6 +1,6 @@
 {
-  "name": "plugin-template",
-  "version": "0.0.0",
+  "name": "mu-api",
+  "version": "0.0.1",
   "description": "template for mu plugins",
   "main": "build/index.js",
   "repository": "https://github.com/Mu-Methods/plugin-template.git",
