@@ -68,7 +68,7 @@ async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<A
 
 
 async function getAccounts (api: API): Promise<Account[]> {
-  const accounts: FeedID[]= []
+  const accounts: Account[]= []
   api.keyring.getKeys().forEach(async (keyObj) => {
     const initMessages = await api.db.query(where(and(author(keyObj.id), type('account#init'))), toPromise())
     const initMessage = {}
@@ -87,6 +87,7 @@ async function getAccounts (api: API): Promise<Account[]> {
       public: keyObj.public,
       curve: keyObj.curve,
       ...contacts,
+      nick_name,
       ties,
       keepers,
     }

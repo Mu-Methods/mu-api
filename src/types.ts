@@ -30,14 +30,14 @@ export interface Account {
 export interface Account {
   id: string;
   public: string; // public key
-  ties: []string; //(list of tied accounts as public kyes)
+  ties: string[]; //(list of tied accounts as public kyes)
   nick_name?: string;
-  curve: readonly string; // non display (do not display to user)
-  blocked: []string; //(public keys that have been blocked)
-  peers: []string; // list of public keys
+  curve: string; // non display (do not display to user)
+  blocked: string[]; //(public keys that have been blocked)
+  peers: string[]; // list of public keys
   chain_id?: string; // only present in keys that come from other protocols
   chain_name?: string; // only present in keys that come from other protocols
-  keepers?: []string; // public keys of people who store their shards
+  keepers?: string[]; // public keys of people who store their shards
 }
 
 
@@ -59,6 +59,7 @@ export interface HelloMessage {
 interface DB {
   feed: Array<Message>;
   create: ( opts:Object ) => Promise<boolean>;
+  query: any;
 }
 
 export interface Invite {
@@ -76,6 +77,7 @@ interface MuTie {
   tie: (master:string, accountToTie:string) => Promise<boolean>;
   acceptTie: (initialTie:TieMessage) => Promise<boolean>;
   cut: (tieToCut:TieMessage) => Promise<boolean>;
+  getTies: (keyObj: FeedID) => TieMessage[]
 }
 
 interface Friends {
