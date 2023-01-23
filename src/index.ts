@@ -2,7 +2,7 @@ const { where, and, type, author, toPromise } = require('ssb-db2/operators')
 
 export const name = 'muAPI'
 export const version = require('../package.json')
-import { API, Message, TieMessage, FeedID, Invite } from './types'
+import { API, Message, TieMessage, FeedID, Invite, Account } from './types'
 
 export const manifest = {
   connect: 'async',
@@ -28,7 +28,7 @@ export const init = (api: API) => {
     openInvite: openInvite.bind(null, api),
     acceptInvite: acceptInvite.bind(null, api),
     close: close.bind(null, api),
-    //getAccounts: getAccounts.bind(null, api),
+    getAccounts: getAccounts.bind(null, api),
     getFeed: getFeed.bind(null, api),
     //createNewAccount: createNewAccount.bind(null, api),
     tie: tie.bind(null, api),
@@ -49,37 +49,109 @@ export const init = (api: API) => {
 // connect to room (#acceptInvite)
 //
 
+function initAccount () {
+
+}
+
 // #
 
 // #addPeer
 
 /*
 async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<Account> {
-  await api.keys.generate().then(account => {
+  await api.keyring.generate().then(account => {
     api.db.create( { content: helloMessage, keys: account } )
   })
 }
 */
 
-async function getAccounts (api: API): Promise<string[]> {
-  const accounts = []
-  api.keys.getKeys().forEach((keyObj) => {
+
+
+async function getAccounts (api: API): Promise<Account[]> {
+  const accounts: FeedID[]= []
+  api.keyring.getKeys().forEach(async (keyObj) => {
     const initMessages = await api.db.query(where(and(author(keyObj.id), type('account#init'))), toPromise())
-    const initMessage = initMessages[0] || {}
+    const initMessage = {}
+    if (initMessages[0] &&
+      initMessages[0].value &&
+      initMessages[0].value.content) Object.assign(initMessage, initMessages[0].value.content)
+    const [nick_name, contacts, ties, keepers] = await Promise.all([
+      findName(api, keyObj),
+      findContactDetails(api, keyObj),
+      api.muTie.getTies(),
+      api.sss.getKeepers(keyObj)
+    ])
     const account = {
-      ...initMessage[0]
+      ...initMessage,
       id: keyObj.id,
       public: keyObj.public,
-      ties: api.getTies
+      curve: keyObj.curve,
+      ...contacts,
+      ties,
+      keepers,
     }
-    const feed = await api.db.query(where(author(keyObj.id)), toPromise())
 
-    const nameMessages = await api.db.query(where(and(author(keyObj.id), type('account#name'))), toPromise())
-    const contactMessages = await api.db.query(where(contact(keyObj.id)), toPromise()).sort((m1, m2) => {
-     () m1.value.content.sequence > m2.value.content.sequence
-    })
+
 
   })
+  return accounts
+}
+
+async function findName (api, keyObj) {
+  let nick_name
+  const nameMessages = await api.db.query(where(and(author(keyObj.id), type('account#name'))), toPromise()).then((res) => {
+  const lastName = nameMessages.sort((m1, m2) => {
+    return m1.value.sequence > m2.value.sequence ? 1 : -1
+  }).pop()
+  if (!lastName ||
+    !lastName.value ||
+    !lastName.value.content ||
+    !lastName.value.content.name ) return
+  nick_name = lastName.value.content.name
+  })
+  return nick_name
+}
+
+async function findContactDetails (api, keyObj) {
+  const contacts = {
+    peers: [],
+    blocked: [],
+  }
+
+  const res = await api.db.query(where(contact(keyObj.id)), toPromise())
+  res.sort((m1, m2) => {
+    return m1.value.sequence > m2.value.sequence ? 1 : -1
+  }).reduce((ac, message) => {
+    if (!message ||
+      !message.value ||
+      !message.value.content ||
+      !message.value.content.contact ) return
+    // if fowlling and not already in peer list add to peer list
+      // if also in blocked and is now a peer remove from block list
+    if (message.value.content.following && !contacts.peers.includes(message.value.content.contact)) {
+      ac.peers.push(message.value.content.contact)
+      if (ac.blocked.includes(message.value.content.contact)) {
+        ac.blocked = ac.blocked.reduce((blocked, peer) => {
+          if (peer === message.value.content.contact) return blocked
+          blocked.push(peer)
+          return blocked
+        }, [])
+      }
+    }
+    // if blocking and not already in block list add to blocked list
+      // if also in peer and is now a blocked remove from peer list
+    if (message.value.content.blocking && !contacts.blocked.includes(message.value.content.contact)) {
+      ac.blocked.push(message.value.content.contact)
+      if (ac.peers.includes(message.value.content.contact)) {
+        ac.peers = ac.peers.reduce((peers, peer) => {
+          if (peer === message.value.content.contact) return peers
+          peers.push(peer)
+          return peers
+        }, [])
+      }
+    }
+  }, contacts)
+  return contacts
 }
 
 
