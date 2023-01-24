@@ -31,6 +31,8 @@ export const init = (api: API) => {
     //getAccounts: getAccounts.bind(null, api),
     getFeed: getFeed.bind(null, api),
     //createNewAccount: createNewAccount.bind(null, api),
+    //createRecovery,
+
     tie: tie.bind(null, api),
     acceptTie: acceptTie.bind(null, api),
     cut: cut.bind(null, api),
@@ -59,6 +61,19 @@ async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<A
     api.db.create( { content: helloMessage, keys: account } )
   })
 }
+*/
+
+/**
+ * initAccount
+ * • takes an encryption key aka password
+ * • creates mnemonic
+ * • creates new account keys out of mnemonic
+ * • autoconnect: boolean
+ * • pub to autoconnect to
+ * • a curve, default ed25519. leave curve out for now, ed25519 will be only option. expand to more options later.
+ * • return the account object
+ * • set up recovery
+ * expose friends dependency, rename getGraph to 
 */
 
 async function getAccounts (api: API): Promise<string[]> {
