@@ -45,30 +45,6 @@ export const init = (api: API) => {
 }
 
 
-// #initAccount
-// check to see if their is a mnemonic
-// if not create mnemonic
-// create first key or next key
-// publish hello world message
-// connect to room (#acceptInvite)
-//
-
-/*
-function initAccount () {
-
-}
-*/
-// #
-
-// #addPeer
-
-/*
-async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<Account> {
-  await api.keyring.generate().then(account => {
-    api.db.create( { content: helloMessage, keys: account } )
-  })
-}
-*/
 
 /**
  * initAccount
@@ -80,10 +56,34 @@ async function createNewAccount (api: API, helloMessage:HelloMessage): Promise<A
  * • a curve, default ed25519. leave curve out for now, ed25519 will be only option. expand to more options later.
  * • return the account object
  * • set up recovery
- * expose friends dependency, rename getGraph to 
+ * expose friends dependency, rename getGraph to
 */
 
+async function initAccount (api, opts): Promise<Account> {
+  await api.keyring.createMnemonic
+  const keys = api.createNewKeys()
+  await new Promise((res, reject) => {
+    api.db.create({keys, content: {
+      type: 'account#init'
+      ...opts
+    }}, (err, message) => {
+      if (err) reject(err)
+      else res(message)
+    })
+  })
+}
+// #
+
+// #addPeer
+
+
 async function getAccounts (api: API): Promise<Account[]> {
+  try {
+
+  } catch (e) {
+
+  }
+
   const accounts: Account[]= []
   api.keyring.getKeys().forEach(async (keyObj) => {
     const initMessages = await api.db.query(where(and(author(keyObj.id), type('account#init'))), toPromise())
@@ -91,7 +91,7 @@ async function getAccounts (api: API): Promise<Account[]> {
     if (initMessages[0] &&
       initMessages[0].value &&
       initMessages[0].value.content) Object.assign(initMessage, initMessages[0].value.content)
-    const [nick_name, contacts, ties, keepers] = await Promise.all([
+    const [name, contacts, ties, keepers] = await Promise.all([
       findName(api, keyObj),
       findContactDetails(api, keyObj),
       api.muTie.getTies(),
@@ -103,7 +103,7 @@ async function getAccounts (api: API): Promise<Account[]> {
       public: keyObj.public,
       curve: keyObj.curve,
       ...contacts,
-      nick_name,
+      name,
       ties,
       keepers,
     }
@@ -115,7 +115,7 @@ async function getAccounts (api: API): Promise<Account[]> {
 }
 
 async function findName (api, keyObj) {
-  let nick_name
+  let name
   const nameMessages = await api.db.query(where(and(author(keyObj.id), type('account#name'))), toPromise()).then((res) => {
   const lastName = nameMessages.sort((m1, m2) => {
     return m1.value.sequence > m2.value.sequence ? 1 : -1
@@ -124,9 +124,9 @@ async function findName (api, keyObj) {
     !lastName.value ||
     !lastName.value.content ||
     !lastName.value.content.name ) return
-  nick_name = lastName.value.content.name
+  name = lastName.value.content.name
   })
-  return nick_name
+  return name
 }
 
 async function findContactDetails (api, keyObj) {

@@ -31,7 +31,7 @@ export interface Account {
   id: string;
   public: string; // public key
   ties: string[]; //(list of tied accounts as public kyes)
-  nick_name?: string;
+  name?: string;
   curve: string; // non display (do not display to user)
   blocked: string[]; //(public keys that have been blocked)
   peers: string[]; // list of public keys
