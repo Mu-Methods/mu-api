@@ -10,15 +10,17 @@ export const manifest = {
   openInvite: 'async',
   acceptInvite: 'async',
   close: 'async',
-  //getAccounts: 'async',
+  getAccounts: 'async',
   getFeed: 'async',
-  //createNewAccount: 'async',
+  initAccount: 'async',
   tie: 'async',
   acceptTie: 'async',
   cut: 'async',
   publish: 'async',
   block: 'async',
-  getNetId: 'async'
+  getNetId: 'async',
+  findName: 'async',
+  findContactDetails: 'async'
 }
 
 export const init = (api: API) => {
@@ -30,15 +32,15 @@ export const init = (api: API) => {
     close: close.bind(null, api),
     getAccounts: getAccounts.bind(null, api),
     getFeed: getFeed.bind(null, api),
-    //createNewAccount: createNewAccount.bind(null, api),
-    //createRecovery,
-
+    initAccount: initAccount.bind(null, api),
     tie: tie.bind(null, api),
     acceptTie: acceptTie.bind(null, api),
     cut: cut.bind(null, api),
     publish: publish.bind(null, api),
     block: block.bind(null, api),
-    getNetId: getNetId.bind(null, api)
+    getNetId: getNetId.bind(null, api),
+    findName: findName.bind(null, api),
+    findContactDetails: findContactDetails.bind(null, api)
   }
 }
 
@@ -51,10 +53,11 @@ export const init = (api: API) => {
 // connect to room (#acceptInvite)
 //
 
+/*
 function initAccount () {
 
 }
-
+*/
 // #
 
 // #addPeer
@@ -178,7 +181,7 @@ async function connect (api: API, address: unknown): Promise<boolean> {
   })
 }
 
-async function generateInvite (api: API, id: FeedID, recps?:Array<string>, /*asLink?:boolean*/): Promise<boolean> {
+async function generateInvite (api: API, netId: FeedID, recps?:Array<string>, /*asLink?:boolean*/): Promise<boolean> {
   return new Promise((resolve, reject) => {
     var newInvite:Invite
     newInvite = { id: id }
@@ -217,8 +220,8 @@ async function getFeed (api: API): Promise<Message[]> {
   return await api.db.feed
 }
 
-async function tie (api: API, master:string, accountToTie:string):  Promise<boolean> {
-  return await api.muTie.tie(master, accountToTie)
+async function tie (api: API, accountToTie:string):  Promise<boolean> {
+  return await api.muTie.tie({end: accountToTie})
 }
 
 async function acceptTie (api: API, initialTie:TieMessage):  Promise<boolean> {
