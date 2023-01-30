@@ -44,8 +44,6 @@ export const init = (api: API) => {
   }
 }
 
-
-
 /**
  * initAccount
  * • takes an encryption key aka password
@@ -243,3 +241,40 @@ async function block (api: API, pubKey: string): Promise<boolean> {
 async function getNetId (api: API): Promise<string> {
   return await api.muCaps.shs
 }
+
+
+interface MigrateOpts {
+  oldKey: FeedID;
+  destroy: boolean;
+  feedFormat?: string;
+  encryptionFormat?: string;
+  encoding?: string;
+}
+
+async function migrate(opts: MigrateOpts):Promise<FeedID> {
+  const newKey = api.keyring.generateKey()
+  api.db.forEach(async(msg) => {
+    ans = api.keyring.unbox(msg.value)
+    if (ans.value.content) {
+      api.db.create({
+        keys: newKey,
+        feedFormat: opts.feedFormat,
+        encryptionFormat: opts.encryptionFormat,
+        encoding: opts.encoding,
+        content: ans.content,
+        recps: msg.value.recipients,
+      })
+    }
+  })
+
+  //create a new key
+  //migrate messages from old key
+  //and republish on new key
+  //simultaneously create a tie between both keys
+  //decrypt the entire database and reencrypt it to all the original recipients
+  //extra parameter: destroy: cut message from the new account after migration process over or block the old account.
+  //store new key in the keyring
+  //optional parameter for create new mnemonic to include in key object
+  //type parameter
+}
+
