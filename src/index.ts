@@ -2,7 +2,7 @@ const { where, and, type, author, toPromise } = require('ssb-db2/operators')
 
 export const name = 'muAPI'
 export const version = require('../package.json')
-import { API, Message, TieMessage, FeedID, Invite, Account } from './types'
+import { API, Message, TieMessage, FeedID, Invite, Account, ShardOpts } from './types'
 
 export const manifest = {
   connect: 'async',
@@ -20,7 +20,9 @@ export const manifest = {
   block: 'async',
   getNetId: 'async',
   findName: 'async',
-  findContactDetails: 'async'
+  findContactDetails: 'async',
+  shardSecret: 'async',
+  migrate: 'async',
 }
 
 export const init = (api: API) => {
@@ -40,7 +42,9 @@ export const init = (api: API) => {
     block: block.bind(null, api),
     getNetId: getNetId.bind(null, api),
     findName: findName.bind(null, api),
-    findContactDetails: findContactDetails.bind(null, api)
+    findContactDetails: findContactDetails.bind(null, api),
+    shardSecret: shardSecret.bind(null, api),
+    migrate: migrate.bind(null, api)
   }
 }
 
@@ -62,7 +66,7 @@ async function initAccount (api, opts): Promise<Account> {
   const keys = api.createNewKeys()
   await new Promise((res, reject) => {
     api.db.create({keys, content: {
-      type: 'account#init'
+      type: 'account#init',
       ...opts
     }}, (err, message) => {
       if (err) reject(err)
@@ -242,20 +246,15 @@ async function getNetId (api: API): Promise<string> {
   return await api.muCaps.shs
 }
 
-
-interface MigrateOpts {
-  oldKey: FeedID;
-  destroy: boolean;
-  feedFormat?: string;
-  encryptionFormat?: string;
-  encoding?: string;
+async function shardSecret (api:API, opts: ShardOpts) {
+  return await api.sss.shardAndSend(opts)
 }
 
-async function migrate(opts: MigrateOpts):Promise<FeedID> {
+async function migrate(api:API, opts: MigrateOpts):Promise<FeedID> {
   const newKey = api.keyring.generateKey()
   api.db.forEach(async(msg) => {
-    ans = api.keyring.unbox(msg.value)
-    if (ans.value.content) {
+    const ans = api.keyring.unbox(msg.value)
+    if (ans && ans.content) {
       api.db.create({
         keys: newKey,
         feedFormat: opts.feedFormat,

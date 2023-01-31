@@ -62,6 +62,30 @@ interface DB {
   query: any;
 }
 
+interface Opts {
+  feedFormat?: string;
+  keys?: FeedID;
+  encryptionFormat?: string;
+  encoding?: string;
+}
+
+export interface SendOpts extends Opts {
+  content: object;
+  recps?: Array<FeedID>
+}
+
+export interface ShardOpts extends Opts {
+  threshold: number;
+  random: boolean;
+  secret: string;
+  recps: Array<FeedID>
+}
+
+export interface MigrateOpts extends Opts {
+  oldKey: FeedID;
+  destroy: boolean;
+}
+
 export interface Invite {
   id: FeedID;
   pubs?: Array<string>;
