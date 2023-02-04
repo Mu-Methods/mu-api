@@ -1,8 +1,6 @@
-const { where, and, type, author, toPromise } = require('ssb-db2/operators')
-
 export const name = 'muAPI'
 export const version = require('../package.json')
-import { API, Message, TieMessage, FeedID, Invite, Account, ShardOpts } from './types'
+import { API, MSG, Message, TieMessage, FeedID, Invite, Account, Contacts, ShardOpts, MigrateOpts } from './types'
 
 export const manifest = {
   connect: 'async',
@@ -64,7 +62,7 @@ export const init = (api: API) => {
 async function initAccount (api, opts): Promise<Account> {
   await api.keyring.createMnemonic
   const keys = api.createNewKeys()
-  await new Promise((res, reject) => {
+  return await new Promise((res, reject) => {
     api.db.create({keys, content: {
       type: 'account#init',
       ...opts
@@ -79,16 +77,16 @@ async function initAccount (api, opts): Promise<Account> {
 // #addPeer
 
 
-async function getAccounts (api: API): Promise<Account[]> {
+async function getAccounts (api: API): Promise<Array<Account>> {
   try {
 
   } catch (e) {
 
   }
 
-  const accounts: Account[]= []
-  api.keyring.getKeys().forEach(async (keyObj) => {
-    const initMessages = await api.db.query(where(and(author(keyObj.id), type('account#init'))), toPromise())
+  const accounts: Array<Account> = []
+  api.keyring.getKeys().forEach(async (keyObj: FeedID) => {
+    const initMessages = await api.db.query(api.db.where(api.db.and(api.db.author(keyObj.id), api.db.type('account#init'))), api.db.toPromise())
     const initMessage = {}
     if (initMessages[0] &&
       initMessages[0].value &&
@@ -96,48 +94,50 @@ async function getAccounts (api: API): Promise<Account[]> {
     const [name, contacts, ties, keepers] = await Promise.all([
       findName(api, keyObj),
       findContactDetails(api, keyObj),
-      api.muTie.getTies(),
+      api.muTie.getTies(keyObj).map((tieMsg) => {
+        if (tieMsg.key !== keyObj.public) return tieMsg.key
+        return ''
+      }).filter(msg => msg),
       api.sss.getKeepers(keyObj)
     ])
-    const account = {
+    const account:Account = {
       ...initMessage,
       id: keyObj.id,
       public: keyObj.public,
       curve: keyObj.curve,
       ...contacts,
-      name,
-      ties,
-      keepers,
+      name: name,
+      ties: ties,
+      keepers: keepers,
     }
-
-
-
+    accounts.push(account)
   })
   return accounts
 }
 
-async function findName (api, keyObj) {
+async function findName (api, keyObj):Promise<string> {
   let name
-  const nameMessages = await api.db.query(where(and(author(keyObj.id), type('account#name'))), toPromise()).then((res) => {
-  const lastName = nameMessages.sort((m1, m2) => {
-    return m1.value.sequence > m2.value.sequence ? 1 : -1
-  }).pop()
-  if (!lastName ||
-    !lastName.value ||
-    !lastName.value.content ||
-    !lastName.value.content.name ) return
-  name = lastName.value.content.name
-  })
+  const nameMessages = await api.db.query(api.db.where(api.db.and(api.db.author(keyObj.id), api.db.type('account#name'))), api.db.toPromise()).then((res) => {
+    const lastName = nameMessages.sort((m1, m2) => {
+      return m1.value.sequence > m2.value.sequence ? 1 : -1
+    }).pop()
+    if (!lastName ||
+      !lastName.value ||
+      !lastName.value.content ||
+      !lastName.value.content.name ) return
+      name = lastName.value.content.name
+      res(lastName)
+    })
   return name
 }
 
 async function findContactDetails (api, keyObj) {
-  const contacts = {
+  const contacts:Contacts = {
     peers: [],
     blocked: [],
   }
 
-  const res = await api.db.query(where(contact(keyObj.id)), toPromise())
+  const res = await api.db.query(api.db.where(api.db.contact(keyObj.id)), api.db.toPromise())
   res.sort((m1, m2) => {
     return m1.value.sequence > m2.value.sequence ? 1 : -1
   }).reduce((ac, message) => {
@@ -186,7 +186,7 @@ async function connect (api: API, address: unknown): Promise<boolean> {
 async function generateInvite (api: API, netId: FeedID, recps?:Array<string>, /*asLink?:boolean*/): Promise<boolean> {
   return new Promise((resolve, reject) => {
     var newInvite:Invite
-    newInvite = { id: id }
+    newInvite = { id: netId }
     if (recps) newInvite.pubs = recps
     api.peerInvites.create(newInvite, (err:any, res:any) => {
       if (err) reject(err)
@@ -222,8 +222,8 @@ async function getFeed (api: API): Promise<Message[]> {
   return await api.db.feed
 }
 
-async function tie (api: API, accountToTie:string):  Promise<boolean> {
-  return await api.muTie.tie({end: accountToTie})
+async function tie (api: API, start: FeedID, end: FeedID):  Promise<boolean> {
+  return await api.muTie.tie({start: start, end: end})
 }
 
 async function acceptTie (api: API, initialTie:TieMessage):  Promise<boolean> {
@@ -250,23 +250,27 @@ async function shardSecret (api:API, opts: ShardOpts) {
   return await api.sss.shardAndSend(opts)
 }
 
+//for regularly scheduled key maintenance
 async function migrate(api:API, opts: MigrateOpts):Promise<FeedID> {
-  const newKey = api.keyring.generateKey()
-  api.db.forEach(async(msg) => {
-    const ans = api.keyring.unbox(msg.value)
-    if (ans && ans.content) {
-      api.db.create({
-        keys: newKey,
-        feedFormat: opts.feedFormat,
-        encryptionFormat: opts.encryptionFormat,
-        encoding: opts.encoding,
-        content: ans.content,
-        recps: msg.value.recipients,
+  return new Promise ((resolve, reject) => {
+    const newKey = api.keyring.generate()
+    api.db.query(async (err:any, msgs:MSG[]) => {
+      if (err) reject(err)
+      msgs.forEach((msg:MSG) => {
+        if (typeof msg.value !== 'string' && msg.value.content) {
+          api.db.create({
+            keys: newKey,
+            feedFormat: opts.feedFormat,
+            encryptionFormat: opts.encryptionFormat,
+            encoding: opts.encoding,
+            content: msg.value.content,
+            recps: msg.value.recps,
+          })
+        }
       })
-    }
+    })
+    resolve(newKey)
   })
-
-  //create a new key
   //migrate messages from old key
   //and republish on new key
   //simultaneously create a tie between both keys
