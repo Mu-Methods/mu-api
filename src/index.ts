@@ -3,54 +3,74 @@ export const version = require('../package.json')
 import { API, MSG, Message, TieMessage, FeedID, Invite, Account, Contacts, ShardOpts, MigrateOpts, FriendOpts, BlockOpts } from './types'
 
 export const manifest = {
+  initAccount: 'async',
   connect: 'async',
+  close: 'async',
+  publish: 'async',
+
+
+
   generateInvite: 'async',
   openInvite: 'async',
   acceptInvite: 'async',
-  close: 'async',
+
   getAccounts: 'async',
   getFeed: 'async',
-  initAccount: 'async',
+  getNetId: 'async',
+  findName: 'async',
+  findContactDetails: 'async',
+
   tie: 'async',
   //setTiePermissions
   acceptTie: 'async',
   cut: 'async',
-  publish: 'async',
-  getNetId: 'async',
-  findName: 'async',
-  findContactDetails: 'async',
+
+  generateSeedphrase: 'async',
+  //readSeedphrase
+  //verifySeedphrase
+  shareSeedphrase: 'async',
+
   shardSecret: 'async',
+
   migrate: 'async',
+
   addPeer: 'async',
   followPeer: 'async',
   blockPeer: 'async',
   getPeers: 'async',
+
   //generateQR
   //generateSeedphrase
-  //readSeedphrase
-  //verifySeedphrase
-  //shareSeedphrase
 }
 
 export const init = (api: API) => {
   return {
+    initAccount: initAccount.bind(null, api),
     connect: connect.bind(null, api),
+    close: close.bind(null, api),
+    publish: publish.bind(null, api),
+
     generateInvite: generateInvite.bind(null, api),
     openInvite: openInvite.bind(null, api),
     acceptInvite: acceptInvite.bind(null, api),
-    close: close.bind(null, api),
+
     getAccounts: getAccounts.bind(null, api),
     getFeed: getFeed.bind(null, api),
-    initAccount: initAccount.bind(null, api),
-    tie: tie.bind(null, api),
-    acceptTie: acceptTie.bind(null, api),
-    cut: cut.bind(null, api),
-    publish: publish.bind(null, api),
     getNetId: getNetId.bind(null, api),
     findName: findName.bind(null, api),
     findContactDetails: findContactDetails.bind(null, api),
+
+    tie: tie.bind(null, api),
+    acceptTie: acceptTie.bind(null, api),
+    cut: cut.bind(null, api),
+
+    generateSeedphrase: generateSeedphrase.bind(null, api),
+    shareSeedphrase: shareSeedphrase.bind(null, api),
+
     shardSecret: shardSecret.bind(null, api),
+
     migrate: migrate.bind(null, api),
+
     addPeer: addPeer.bind(null, api),
     followPeer: followPeer.bind(null, api),
     blockPeer: blockPeer.bind(null, api),
@@ -284,6 +304,22 @@ async function getPeers (api: API, cb?: Function): Promise<Object> {
 
 async function getNetId (api: API): Promise<string> {
   return await api.muCaps.shs
+}
+
+async function generateSeedphrase (api: API): Promise<string> {
+  return await api.keyring.createMnemonic()
+}
+
+/*
+async function readSeedphrase () { 
+}
+
+async function verifySeedphrase (api:API, strToVerify: string) {
+}
+*/
+
+async function shareSeedphrase (api: API, opts:ShardOpts) {
+  return await shardSecret(api, opts)
 }
 
 async function shardSecret (api:API, opts: ShardOpts) {
