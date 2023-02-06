@@ -1,6 +1,6 @@
 export const name = 'muAPI'
 export const version = require('../package.json')
-import { API, MSG, Message, TieMessage, FeedID, Invite, Account, Contacts, ShardOpts, MigrateOpts } from './types'
+import { API, MSG, Message, TieMessage, FeedID, Invite, Account, Contacts, ShardOpts, MigrateOpts, FriendOpts, BlockOpts } from './types'
 
 export const manifest = {
   connect: 'async',
@@ -12,15 +12,24 @@ export const manifest = {
   getFeed: 'async',
   initAccount: 'async',
   tie: 'async',
+  //setTiePermissions
   acceptTie: 'async',
   cut: 'async',
   publish: 'async',
-  block: 'async',
   getNetId: 'async',
   findName: 'async',
   findContactDetails: 'async',
   shardSecret: 'async',
   migrate: 'async',
+  addPeer: 'async',
+  followPeer: 'async',
+  blockPeer: 'async',
+  getPeers: 'async',
+  //generateQR
+  //generateSeedphrase
+  //readSeedphrase
+  //verifySeedphrase
+  //shareSeedphrase
 }
 
 export const init = (api: API) => {
@@ -37,12 +46,15 @@ export const init = (api: API) => {
     acceptTie: acceptTie.bind(null, api),
     cut: cut.bind(null, api),
     publish: publish.bind(null, api),
-    block: block.bind(null, api),
     getNetId: getNetId.bind(null, api),
     findName: findName.bind(null, api),
     findContactDetails: findContactDetails.bind(null, api),
     shardSecret: shardSecret.bind(null, api),
-    migrate: migrate.bind(null, api)
+    migrate: migrate.bind(null, api),
+    addPeer: addPeer.bind(null, api),
+    followPeer: followPeer.bind(null, api),
+    blockPeer: blockPeer.bind(null, api),
+    getPeers: getPeers.bind(null, api)
   }
 }
 
@@ -238,8 +250,36 @@ async function publish (api: API, userKeys: Array<string>, content:any, recipien
   return await api.db.create( { content: content, keys: userKeys, recps: recipients } )
 }
 
-async function block (api: API, pubKey: string): Promise<boolean> {
-  return await api.friends.block(pubKey)
+async function addPeer (api: API, address:unknown) : Promise<boolean> {
+  return await connect(api, address)
+}
+
+async function followPeer (api: API, peer: FeedID, opts: FriendOpts): Promise<Message> {
+  return new Promise ((resolve, reject) => {
+    api.friends.follow(peer, opts, (err, res) => {
+      if (err) reject(err)
+      resolve(res)
+    })
+  })
+}
+
+async function blockPeer (api: API, peer: FeedID, opts: BlockOpts): Promise<Message> {
+  return new Promise ((resolve, reject) => {
+    api.friends.block(peer, opts, (err, res) => {
+      if (err) reject(err)
+      resolve(res)
+    })
+  })
+}
+
+async function getPeers (api: API, cb?: Function): Promise<Object> {
+  return new Promise ((resolve, reject) => {
+    cb ||= (err, res) => {
+      if (err) reject(err)
+      resolve(res)
+    }
+    api.friends.graph(cb)
+  })
 }
 
 async function getNetId (api: API): Promise<string> {

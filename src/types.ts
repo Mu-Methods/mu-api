@@ -137,8 +137,19 @@ interface MuTie {
   getTies: (keyObj: FeedID) => MSG[]
 }
 
+export interface FriendOpts {
+  state: boolean;
+  recps?: Array<FeedID>;
+}
+
+export interface BlockOpts extends FriendOpts {
+  reason: string;
+}
+
 interface Friends {
-  block: (pubKey: string) => Promise<boolean>;
+  follow: (feedId: FeedID, opts: FriendOpts, cb: Function) => Promise<Message>;
+  block: (feedId: FeedID, opts: BlockOpts, cb: Function) => Promise<Message>;
+  graph: (cb: Function) => Promise<Object>;
 }
 
 interface MuCaps {
