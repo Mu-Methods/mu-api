@@ -38,6 +38,7 @@ export const manifest = {
   followPeer: 'async',
   blockPeer: 'async',
   getPeers: 'async',
+  getGraph: 'async'
 
   //generateQR
   //generateSeedphrase
@@ -74,7 +75,8 @@ export const init = (api: API) => {
     addPeer: addPeer.bind(null, api),
     followPeer: followPeer.bind(null, api),
     blockPeer: blockPeer.bind(null, api),
-    getPeers: getPeers.bind(null, api)
+    getPeers: getPeers.bind(null, api),
+    getGraph: getGraph.bind(null, api),
   }
 }
 
@@ -118,7 +120,7 @@ async function getAccounts (api: API): Promise<Array<Account>> {
 
   const accounts: Array<Account> = []
   api.keyring.getKeys().forEach(async (keyObj: FeedID) => {
-    const initMessages = await api.db.query(api.db.where(api.db.and(api.db.author(keyObj.id), api.db.type('account#init'))), api.db.toPromise())
+    const initMessages = await api.db.query(api.operators.where(api.operators.and(api.operators.author(keyObj.id), api.operators.type('account#init'))), api.operators.toPromise())
     const initMessage = {}
     if (initMessages[0] &&
       initMessages[0].value &&
@@ -149,7 +151,7 @@ async function getAccounts (api: API): Promise<Array<Account>> {
 
 async function findName (api, keyObj):Promise<string> {
   let name
-  const nameMessages = await api.db.query(api.db.where(api.db.and(api.db.author(keyObj.id), api.db.type('account#name'))), api.db.toPromise()).then((res) => {
+  const nameMessages = await api.db.query(api.operators.where(api.operators.and(api.operators.author(keyObj.id), api.operators.type('account#name'))), api.operators.toPromise()).then((res) => {
     const lastName = nameMessages.sort((m1, m2) => {
       return m1.value.sequence > m2.value.sequence ? 1 : -1
     }).pop()
@@ -169,7 +171,7 @@ async function findContactDetails (api, keyObj) {
     blocked: [],
   }
 
-  const res = await api.db.query(api.db.where(api.db.contact(keyObj.id)), api.db.toPromise())
+  const res = await api.db.query(api.operators.where(api.operators.contact(keyObj.id)), api.operators.toPromise())
   res.sort((m1, m2) => {
     return m1.value.sequence > m2.value.sequence ? 1 : -1
   }).reduce((ac, message) => {
@@ -206,12 +208,15 @@ async function findContactDetails (api, keyObj) {
 }
 
 
-async function connect (api: API, address: unknown): Promise<boolean> {
+async function connect (api: API, address: string, remember?: boolean): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    api.connect(address, (err:any, res:any) => {
+    api.conn.connect(address, (err:any, res:any) => {
       if (err) reject(err)
+      if (remember) api.conn.remember(address)
       resolve(res)
     })
+
+
   })
 }
 
@@ -270,7 +275,7 @@ async function publish (api: API, userKeys: Array<string>, content:any, recipien
   return await api.db.create( { content: content, keys: userKeys, recps: recipients } )
 }
 
-async function addPeer (api: API, address:unknown) : Promise<boolean> {
+async function addPeer (api: API, address:string) : Promise<boolean> {
   return await connect(api, address)
 }
 
@@ -292,7 +297,11 @@ async function blockPeer (api: API, peer: FeedID, opts: BlockOpts): Promise<Mess
   })
 }
 
-async function getPeers (api: API, cb?: Function): Promise<Object> {
+async function getPeers (api: API): Promise<Object> {
+  return await api.conn.peers()
+}
+
+async function getGraph (api: API, cb?: Function): Promise<Object> {
   return new Promise ((resolve, reject) => {
     cb ||= (err, res) => {
       if (err) reject(err)

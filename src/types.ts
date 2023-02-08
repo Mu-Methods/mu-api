@@ -72,6 +72,9 @@ interface DB {
   feed: Array<Message>;
   create: ( opts:Object ) => Promise<boolean>;
   query: any;
+}
+
+export interface Operators {
   where: any;
   and: any;
   type: any;
@@ -177,10 +180,19 @@ interface SssApi {
   recoverSecret: (publicKey: string) => Promise<string>;
 }
 
+interface ConnApi {
+  connect: (addr: string, cb: Function) => Promise<boolean>,
+  remember: (addr: string) => Promise<boolean>,
+  disconnect: (addr: string, cb: Function) => Promise<boolean>,
+  forget: (addr: string) => Promise<boolean>,
+  peers: () => Promise<Array<any>>
+}
+
 export interface API {
-  connect: (address: unknown, cb: Function) => Promise<boolean>;
+  conn: ConnApi
   close: () => Promise<boolean>;
   db: DB;
+  operators: Operators;
   peerInvites: PeerInvites;
   muTie: MuTie;
   friends: Friends;
