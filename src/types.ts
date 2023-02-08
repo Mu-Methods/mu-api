@@ -1,18 +1,25 @@
-export interface Message {
-  author: string;
-  backlink: string;
-  hash: string;
-  nonce: number | string;
+export interface MSG {
+  key: string;
+  value: string | Message;
   timestamp: number;
-  content: any; // correct me
-  signature: string;
+}
+
+export interface Message {
+    author: string;
+    backlink: string;
+    hash: string;
+    nonce: number | string;
+    timestamp: number;
+    content: any; // correct me
+    recps: Array<FeedID>;
+    signature: string;
 }
 
 export interface TieMessage extends Message {
-  content: {
-    type: 'account#tie';
-    data: string | TieMessage;
-  }
+    content: {
+      type: 'account#tie';
+      data: string | TieMessage;
+    }
 }
 
 
@@ -40,6 +47,11 @@ export interface Account {
   keepers?: string[]; // public keys of people who store their shards
 }
 
+export interface Contacts {
+  peers: string[];
+  blocked: string[];
+}
+
 
 export interface FeedID {
   public: string;
@@ -62,6 +74,48 @@ interface DB {
   query: any;
 }
 
+export interface Operators {
+  where: any;
+  and: any;
+  type: any;
+  author: any;
+  toPromise: any;
+  contact: any;
+}
+
+interface Opts {
+  keys?: FeedID;
+  feedFormat?: string;
+  encryptionFormat?: string;
+  encoding?: string;
+}
+
+export interface SendOpts extends Opts {
+  content: object;
+  recps?: Array<FeedID>
+}
+
+export interface ShardOpts extends Opts {
+  threshold: number;
+  random: boolean;
+  secret: string;
+  recps: Array<FeedID>
+}
+
+interface RequestOpts extends Opts{
+  recps: Array<FeedID>;
+  public: string; //public key
+}
+
+interface ResendOpts extends Opts {
+  recp: FeedID;
+}
+
+export interface MigrateOpts extends Opts {
+  oldKey: FeedID;
+  destroy: boolean;
+}
+
 export interface Invite {
   id: FeedID;
   pubs?: Array<string>;
@@ -73,15 +127,32 @@ interface PeerInvites {
   acceptInvite: (invite: Message, cb: Function) => Promise<boolean>;
 }
 
+export interface TieOpts extends Opts {
+  keys: FeedID;
+  end: FeedID;
+  depth: number;
+}
+
 interface MuTie {
-  tie: (master:string, accountToTie:string) => Promise<boolean>;
+  tie: (TieOpts) => Promise<boolean>;
   acceptTie: (initialTie:TieMessage) => Promise<boolean>;
   cut: (tieToCut:TieMessage) => Promise<boolean>;
-  getTies: (keyObj: FeedID) => TieMessage[]
+  getTies: (keyObj: FeedID) => MSG[]
+}
+
+export interface FriendOpts {
+  state: boolean;
+  recps?: Array<FeedID>;
+}
+
+export interface BlockOpts extends FriendOpts {
+  reason: string;
 }
 
 interface Friends {
-  block: (pubKey: string) => Promise<boolean>;
+  follow: (feedId: FeedID, opts: FriendOpts, cb: Function) => Promise<Message>;
+  block: (feedId: FeedID, opts: BlockOpts, cb: Function) => Promise<Message>;
+  graph: (cb: Function) => Promise<Object>;
 }
 
 interface MuCaps {
@@ -89,6 +160,7 @@ interface MuCaps {
 }
 
 export interface KeyApi {
+  generate: () => FeedID
   box: (content: object | string | boolean | number, recipients: ReadonlyArray<string>) => string;
   unbox: (boxed: string, keys:FeedID) => object | string | boolean | number | undefined;
   sign: (keys:FeedID, hmac_key: Buffer, str: string) => string;
@@ -97,16 +169,34 @@ export interface KeyApi {
   useMnemonic: (mnemonic: string) => Promise<void>;
   createMnemonic: () => Promise<string>;
   createNewKeys: (index?: number, mnemonic?: string) =>FeedID;
-  getKeys: () =>FeedID[]
+  getKeys: () => FeedID[];
+}
+
+interface SssApi {
+  shardAndSend: (opts: ShardOpts) => Promise<boolean>;
+  getKeepers: (keyObj: FeedID) => Promise<Array<string>>;
+  requestShards: (opts: RequestOpts) => Promise<boolean>;
+  resendShards: (opts: ResendOpts) => Promise<boolean>;
+  recoverSecret: (publicKey: string) => Promise<string>;
+}
+
+interface ConnApi {
+  connect: (addr: string, cb: Function) => Promise<boolean>,
+  remember: (addr: string) => Promise<boolean>,
+  disconnect: (addr: string, cb: Function) => Promise<boolean>,
+  forget: (addr: string) => Promise<boolean>,
+  peers: () => Promise<Array<any>>
 }
 
 export interface API {
-  connect: (address: unknown, cb: Function) => Promise<boolean>;
+  conn: ConnApi
   close: () => Promise<boolean>;
   db: DB;
+  operators: Operators;
   peerInvites: PeerInvites;
   muTie: MuTie;
   friends: Friends;
   muCaps: MuCaps;
   keyring: KeyApi;
+  sss: SssApi;
 }

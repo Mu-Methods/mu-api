@@ -2,7 +2,11 @@
 
 Assembles a wrapper aroung the required plugin methods for use with mu-server, secret-stack, or other api. see src/types.ts for the specific shape of the api.
 
+## how to publish
+## Example
+
 ## Methods
+
 
 ### connect(address)
 
